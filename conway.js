@@ -1,13 +1,15 @@
+var cells = []
+
 function createTable(cell_count) {
     const body = document.getElementsByTagName('body')[0]
     const table = document.createElement('table')
     const tbody = document.createElement('tbody')
+    cells = new Array(cell_count * cell_count).fill(0);
 
-    idx = 0
     for (let i = 1; i <= cell_count; i++) {
         const tr = document.createElement("tr")
         for (let j = 0; j < cell_count; j++) {
-            idx++
+            const idx = i * cell_count + j + 1
             const td = document.createElement("td")
             td.setAttribute("data-tag",idx)
             tr.appendChild(td)
@@ -17,15 +19,12 @@ function createTable(cell_count) {
 
     table.appendChild(tbody)
     body.appendChild(table)
+    return cells
 }
 
 function init(initial_cells) {
-    const tds = document.querySelectorAll("td")
-    tds.forEach(td => {
-        const dataTag = parseInt(td.getAttribute('data-tag'))
-        if (initial_cells.includes(dataTag)) {
-            td.classList.add("alive")
-        }
+    initial_cells.forEach(cell => {
+        cells[cell] = 1
     })
 }
 
@@ -65,81 +64,64 @@ function getNeighbors(cell, cell_count) {
     return neighbors;
 }
 
-function get_cell_to_kill(element, cell_count) {
-    const cell_id = parseInt(element.getAttribute('data-tag'))
-    const neighbors = getNeighbors(cell_id, cell_count)
-
+function getStatus(singleCell, cell_count) {
+    const neighbors = getNeighbors(singleCell, cell_count)
     const aliveNeighbors = neighbors.reduce((acc, neighbor_id) => {
-        const neighbor_element = document.querySelector(`td[data-tag="${neighbor_id}"]`)
-        if (neighbor_element.classList.contains('alive')) {
+        const neighbor_element = cells[neighbor_id]
+        if (neighbor_element === 1) {
             acc++
         }
         return acc
     }, [0])
 
-    if (aliveNeighbors < 2 || aliveNeighbors > 3) {
-        return element
-    }
-    return null
+    /*
+    * 1. Any live cell with fewer than two live neighbours dies, as if by underpopulation.
+    * 2. Any live cell with two or three live neighbours lives on to the next generation.
+    * 3. Any live cell with more than three live neighbours dies, as if by overpopulation.
+    * 4. Any dead cell with exactly three live neighbours becomes a live cell, as if by reproduction.
+    */
+    if (aliveNeighbors === 3) return 1
+    if (aliveNeighbors === 2 && cells[singleCell] === 1) return 1
+    return 0
 }
 
-function ruleOne(elements, cell_count) {
-    const elements_to_kill = []
-    elements.forEach(element => {
-        const cell_to_kill = get_cell_to_kill(element, cell_count)
-        if (cell_to_kill !== null) {
-            elements_to_kill.push(cell_to_kill)
-        }
+function applyRules(cell_count) {
+    const cell_snapshot = []
+    Object.keys(cells).forEach(key => {
+        cell_snapshot[parseInt(key)] = getStatus(parseInt(key), cell_count)
     })
-
-    elements_to_kill.forEach(element => {
-        element.classList.remove('alive')
-    })
+    cells = cell_snapshot
 }
 
-function get_cell_to_alive(element, cell_count) {
-    const cell_id = parseInt(element.getAttribute('data-tag'))
-    const neighbors = getNeighbors(cell_id, cell_count)
-
-    const aliveNeighbors = neighbors.reduce((acc, neighbor_id) => {
-        const neighbor_element = document.querySelector(`td[data-tag="${neighbor_id}"]`)
-        if (neighbor_element.classList.contains('alive')) {
-            acc++
-        }
-        return acc
-    }, [0])
-
-    if (aliveNeighbors===3) {
-        return element
-    }
-    return null
+function init_square(id,cell_count) {
+    return [
+        id, id+1, id-1,
+        id+cell_count, id+cell_count+1, id+cell_count-1,
+        id-cell_count, id-cell_count+1, id-cell_count-1
+    ]
 }
 
-function ruleFour(elements, cell_count) {
-    const cells_to_alive = []
-    elements.forEach(element => {
-        const cell_to_alive = get_cell_to_alive(element, cell_count)
-        if (cell_to_alive !== null) {
-            cells_to_alive.push(cell_to_alive)
-        }
-    })
+function init_pulsar(id, cell_count) {
+    return [
+        id+2, id+3, id+4, id+8, id+9, id+10,
+        id+cell_count*2, id+5+cell_count*2, id+7+cell_count*2, id+12+cell_count*2,
+        id+cell_count*3, id+5+cell_count*3, id+7+cell_count*3, id+12+cell_count*3,
+        id+cell_count*4, id+5+cell_count*4, id+7+cell_count*4, id+12+cell_count*4,
+        id+2+cell_count*5, id+3+cell_count*5, id+4+cell_count*5, id+8+cell_count*5, id+9+cell_count*5, id+10+cell_count*5,
 
-    cells_to_alive.forEach(element => {
-        element.classList.add('alive')
-    })
-}
-
-function gameloop(cell_count) {
-    const alive_cells = document.querySelectorAll("td.alive")
-    ruleOne(alive_cells, cell_count)
-    const dead_cells = document.querySelectorAll("td:not(.alive)")
-    ruleFour(dead_cells, cell_count)
+        id+2+cell_count*7, id+3+cell_count*7, id+4+cell_count*7, id+8+cell_count*7, id+9+cell_count*7, id+10+cell_count*7,
+        id+cell_count*8, id+5+cell_count*8, id+7+cell_count*8, id+12+cell_count*8,
+        id+cell_count*9, id+5+cell_count*9, id+7+cell_count*9, id+12+cell_count*9,
+        id+cell_count*10, id+5+cell_count*10, id+7+cell_count*10, id+12+cell_count*10,
+        id+2+cell_count*12, id+3+cell_count*12, id+4+cell_count*12, id+8+cell_count*12, id+9+cell_count*12, id+10+cell_count*12
+    ]
 }
 
 function main() {
-    cell_count = 50
-    refresh_rate = 250
+    cell_count = 250
+    refresh_rate = 50
     initial_cells = []
+    initial_cells = init_pulsar(4520, cell_count)
 
     for (let index = 1; index < cell_count*cell_count; index++) {
         if (Math.random() < 0.4) {
@@ -149,7 +131,31 @@ function main() {
 
     createTable(cell_count)
     init(initial_cells)
-    setInterval(() => gameloop(cell_count),refresh_rate)
+    
+    const elements = document.querySelectorAll(`td`)
+    drawTable()
+
+    function drawTable() {
+        const previousCells = [...cells]
+
+        applyRules(cell_count)
+
+        elements.forEach(element => {
+            const elementId = parseInt(element.getAttribute(`data-tag`))
+            if (previousCells[elementId] !== cells[elementId]) {
+                cells[elementId] === 1 ? element.classList.add(`alive`) : element.classList.remove(`alive`)
+            }
+        })
+    }
+    
+    function gameloop() {
+        drawTable()
+        setTimeout(() => {
+            requestAnimationFrame(gameloop)
+        }, refresh_rate)
+    }
+    
+    gameloop()
 }
 
 main()
