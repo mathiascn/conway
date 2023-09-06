@@ -6,15 +6,3 @@
 body {
     background-color: #2c2c2c;
 }
-table {
-    border-spacing:0;
-}
-td {
-    background-color: rgb(148, 148, 148);
-    height: 5px;
-    width: 5px;
-}
-
-.alive {
-    background-color: aqua;
-}
